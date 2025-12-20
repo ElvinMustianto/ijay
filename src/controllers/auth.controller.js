@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
-import { generateTokens } from '../utils/token.js';
+import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import {
   success,
   badRequest,
@@ -33,8 +33,6 @@ export const register = async (req, res) => {
       companyId,
     });
 
-    const { accessToken, refreshToken } = generateTokens(user);
-
     return success(res, {
       code: 201,
       message: 'Register berhasil',
@@ -42,8 +40,6 @@ export const register = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        accessToken,
-        refreshToken,
       },
     });
   } catch (error) {
@@ -75,7 +71,8 @@ export const login = async (req, res) => {
     user.lastLoginAt = new Date();
     await user.save();
 
-    const { accessToken, refreshToken } = generateTokens(user);
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
     return success(res, {
       message: 'Login berhasil',
@@ -113,7 +110,7 @@ export const refreshToken = async (req, res) => {
       return unauthorized(res, 'User tidak valid');
     }
 
-    const tokens = generateTokens(user);
+    const tokens = generateAccessToken(user);
 
     return success(res, {
       message: 'Token berhasil diperbarui',

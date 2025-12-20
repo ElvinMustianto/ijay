@@ -30,6 +30,16 @@ const companySchema = new mongoose.Schema(
         default: 'Indonesia',
       },
     },
+    location: {
+      lat: {
+        type: Number,
+        required: false,
+      },
+      lng: {
+        type: Number,
+        required: false,
+      },
+    },
 
     industry: {
       type: String,
@@ -39,11 +49,6 @@ const companySchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
-    },
-
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
     },
   },
   {

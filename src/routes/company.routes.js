@@ -75,7 +75,7 @@ router.post('/', auth, createCompany);
  *       200:
  *         description: List of companies
  */
-router.get('/', auth, getCompanies);
+router.get('/', getCompanies);
 
 /**
  * @swagger

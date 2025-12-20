@@ -8,13 +8,6 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
-    sku: {
-      type: String,
-      unique: true,
-      uppercase: true,
-      trim: true,
-    },
-
     description: {
       type: String,
       trim: true,
@@ -37,19 +30,13 @@ const productSchema = new mongoose.Schema(
       min: 0,
     },
 
-    companyId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Company',
-      required: true,
-    },
-
     // Relasi ke Image (gallery)
-    images: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Image',
-      },
-    ],
+    // images: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'Image',
+    //   },
+    // ],
 
     isActive: {
       type: Boolean,
