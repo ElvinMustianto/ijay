@@ -1,6 +1,5 @@
 import express from 'express';
 import {
-  register,
   login,
   getProfile,
   refreshToken
@@ -15,43 +14,6 @@ const router = express.Router();
  *   name: Auth
  *   description: Authentication & Authorization
  */
-
-/**
- * @swagger
- * /api/auth/register:
- *   post:
- *     summary: Register user baru
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - email
- *               - password
- *             properties:
- *               name:
- *                 type: string
- *                 example: Elvin Mustianto
- *               email:
- *                 type: string
- *                 example: elvin@mail.com
- *               password:
- *                 type: string
- *                 example: password123
- *               companyId:
- *                 type: string
- *                 example: 65f9b123abc
- *     responses:
- *       201:
- *         description: Register berhasil
- *       409:
- *         description: Email sudah terdaftar
- */
-router.post('/register', register);
 
 /**
  * @swagger
@@ -71,7 +33,7 @@ router.post('/register', register);
  *             properties:
  *               email:
  *                 type: string
- *                 example: elvin@mail.com
+ *                 example: admin@gmail.com
  *               password:
  *                 type: string
  *                 example: password123

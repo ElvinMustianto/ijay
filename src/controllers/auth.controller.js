@@ -11,43 +11,6 @@ import {
 } from '../utils/responseHelpers.js';
 
 /**
- * REGISTER
- */
-export const register = async (req, res) => {
-  try {
-    const { name, email, password, companyId } = req.body;
-
-    if (!name || !email || !password) {
-      return badRequest(res, 'Name, email, dan password wajib diisi');
-    }
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return conflict(res, 'Email sudah terdaftar');
-    }
-
-    const user = await User.create({
-      name,
-      email,
-      password,
-      companyId,
-    });
-
-    return success(res, {
-      code: 201,
-      message: 'Register berhasil',
-      data: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
-    });
-  } catch (error) {
-    return internalServerError(res, 'Gagal register', error);
-  }
-};
-
-/**
  * LOGIN
  */
 export const login = async (req, res) => {
