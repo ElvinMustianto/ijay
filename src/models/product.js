@@ -56,8 +56,6 @@ const productSchema = new mongoose.Schema(
 
 // Indexing biar query cepat
 productSchema.index({ name: 'text', description: 'text' });
-productSchema.index({ sku: 1 });
-productSchema.index({ companyId: 1 });
 
 const Product = mongoose.model('Product', productSchema);
 

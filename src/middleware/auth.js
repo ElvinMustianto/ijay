@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
+import RefreshToken from '../models/token.js';
 import { unauthorized } from '../utils/responseHelpers.js';
 
 export const auth = async (req, res, next) => {
@@ -12,7 +13,26 @@ export const auth = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    let isRefreshToken = false;
+    try {
+      // try access token
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      // fallback to refresh token
+      try {
+        decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+        isRefreshToken = true;
+
+        // cek apakah refresh token ada di DB dan valid
+        const exists = await RefreshToken.findOne({ token });
+        if (!exists) {
+          return unauthorized(res, 'Refresh token tidak terdaftar');
+        }
+      } catch (err2) {
+        return unauthorized(res, 'Token tidak valid');
+      }
+    }
 
     const user = await User.findById(decoded.id).select('-password');
 
@@ -21,8 +41,10 @@ export const auth = async (req, res, next) => {
     }
 
     req.user = user;
+    req.isRefreshToken = isRefreshToken;
     next();
   } catch (error) {
+    console.error('[AUTH ERROR]', error.message);
     return unauthorized(res, 'Token tidak valid');
   }
 };

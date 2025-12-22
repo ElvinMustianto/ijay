@@ -1,12 +1,12 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
+import { saveRefreshToken, rotateRefreshToken } from '../service/token.service.js';
 import {
   success,
   badRequest,
   unauthorized,
   forbidden,
-  conflict,
   internalServerError,
 } from '../utils/responseHelpers.js';
 
@@ -37,6 +37,11 @@ export const login = async (req, res) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
+    await saveRefreshToken({
+      userId: user._id,
+      refreshToken,
+    });
+
     return success(res, {
       message: 'Login berhasil',
       data: {
@@ -62,22 +67,36 @@ export const refreshToken = async (req, res) => {
     if (!refreshToken) {
       return badRequest(res, 'Refresh token wajib disertakan');
     }
-
-    const decoded = jwt.verify(
-      refreshToken,
-      process.env.JWT_REFRESH_SECRET
-    );
+    
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    } catch (err) {
+      return unauthorized(res, 'Refresh token tidak valid');
+    }
 
     const user = await User.findById(decoded.id);
     if (!user) {
       return unauthorized(res, 'User tidak valid');
     }
 
-    const tokens = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    const rotated = await rotateRefreshToken({
+      userId: user._id,
+      oldRefreshToken: refreshToken,
+      newRefreshToken,
+    });
+
+    if (!rotated) {
+      return unauthorized(res, 'Refresh token tidak valid atau sudah digunakan');
+    }
 
     return success(res, {
       message: 'Token berhasil diperbarui',
-      data: tokens,
+      data: {
+        refreshToken: newRefreshToken,
+      },
     });
   } catch (error) {
     return unauthorized(res, 'Refresh token tidak valid');

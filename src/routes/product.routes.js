@@ -40,9 +40,6 @@ const router = express.Router();
  *               name:
  *                 type: string
  *                 example: Keyboard Mechanical
- *               sku:
- *                 type: string
- *                 example: KB-001
  *               description:
  *                 type: string
  *                 example: Keyboard mechanical RGB
@@ -55,9 +52,6 @@ const router = express.Router();
  *               stock:
  *                 type: number
  *                 example: 10
- *               companyId:
- *                 type: string
- *                 example: 65f9b123abc
  *               images:
  *                 type: array
  *                 items:
@@ -72,8 +66,6 @@ const router = express.Router();
  *         description: Bad request
  *       401:
  *         description: Unauthorized
- *       409:
- *         description: SKU already exists
  */
 router.post('/', auth, createProduct);
 
@@ -85,19 +77,6 @@ router.post('/', auth, createProduct);
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: companyId
- *         schema:
- *           type: string
- *       - in: query
- *         name: isActive
- *         schema:
- *           type: boolean
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
  *     responses:
  *       200:
  *         description: List of products

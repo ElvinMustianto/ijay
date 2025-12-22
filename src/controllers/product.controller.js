@@ -20,24 +20,11 @@ export const createProduct = async (req, res) => {
       price,
       discountPrice,
       stock,
-      companyName,
       isActive,
     } = req.body;
 
-    if (!name || !price || !companyName) {
+    if (!name || !price) {
       return badRequest(res, 'Nama produk, harga, dan companyName wajib diisi');
-    }
-
-    const company = await Company.findOne({ name: companyName });
-    if (!company) {
-      return notFound(res, 'Company tidak ditemukan');
-    }
-
-    if (sku) {
-      const existingProduct = await Product.findOne({ sku });
-      if (existingProduct) {
-        return conflict(res, 'SKU produk sudah digunakan');
-      }
     }
 
     let product = await Product.create({
@@ -46,13 +33,9 @@ export const createProduct = async (req, res) => {
       price,
       discountPrice,
       stock,
-      companyId: company._id,
       isActive,
       createdBy: req.user?.id || null,
     });
-
-    // 🔁 Populate agar response punya company name
-    product = await product.populate('companyId', 'name');
 
     return success(res, {
       code: 201,
@@ -69,25 +52,6 @@ export const createProduct = async (req, res) => {
  */
 export const getProducts = async (req, res) => {
   try {
-    const { companyName, isActive, search } = req.query;
-    const filter = {};
-
-    if (companyName) {
-      const company = await Company.findOne({ name: companyName });
-      if (!company) {
-        return notFound(res, 'Company tidak ditemukan');
-      }
-      filter.companyId = company._id;
-    }
-
-    if (isActive !== undefined) {
-      filter.isActive = isActive === 'true';
-    }
-
-    if (search) {
-      filter.$text = { $search: search };
-    }
-
     const products = await Product.find(filter)
       .populate('companyId', 'name')
       .sort({ createdAt: -1 });
@@ -133,31 +97,11 @@ export const updateProduct = async (req, res) => {
     const { id } = req.params;
     const updateData = { ...req.body };
 
-    if (updateData.companyName) {
-      const company = await Company.findOne({ name: updateData.companyName });
-      if (!company) {
-        return notFound(res, 'Company tidak ditemukan');
-      }
-      updateData.companyId = company._id;
-      delete updateData.companyName;
-    }
-
-    if (updateData.sku) {
-      const existingProduct = await Product.findOne({
-        sku: updateData.sku,
-        _id: { $ne: id },
-      });
-
-      if (existingProduct) {
-        return conflict(res, 'SKU produk sudah digunakan');
-      }
-    }
-
     let product = await Product.findByIdAndUpdate(
       id,
       updateData,
       { new: true }
-    ).populate('companyId', 'name');
+    ).populate('name');
 
     if (!product) {
       return notFound(res, 'Produk tidak ditemukan');
