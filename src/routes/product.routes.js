@@ -8,6 +8,7 @@ import {
 } from '../controllers/product.controller.js';
 
 import auth from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ const router = express.Router();
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -52,13 +53,16 @@ const router = express.Router();
  *               stock:
  *                 type: number
  *                 example: 10
+ *               companyId:
+ *                 type: string
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
  *               images:
  *                 type: array
  *                 items:
  *                   type: string
- *               isActive:
- *                 type: boolean
- *                 example: true
+ *                   format: binary
  *     responses:
  *       201:
  *         description: Product created successfully
@@ -67,7 +71,12 @@ const router = express.Router();
  *       401:
  *         description: Unauthorized
  */
-router.post('/', auth, createProduct);
+router.post(
+  '/',
+  auth,
+  upload.array('images', 5),
+  createProduct
+);
 
 /**
  * @swagger
@@ -75,8 +84,6 @@ router.post('/', auth, createProduct);
  *   get:
  *     summary: Get all products
  *     tags: [Products]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of products

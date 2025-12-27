@@ -1,0 +1,77 @@
+# =========================
+# Node.js
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.local
+.env.development
+.env.production
+
+# =========================
+# Build & coverage
+# =========================
+dist/
+build/
+coverage/
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE & Editor
+# =========================
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# =========================
+# Uploads (if using local storage)
+# =========================
+uploads/
+temp/
+
+# =========================
+# Swagger generated files (optional)
+# =========================
+swagger-output.json
+
+# =========================
+# MongoDB
+# =========================
+data/
+dump/
+
+# =========================
+# Tests
+# =========================
+.nyc_output/
+
+# =========================
+# Frontend (Vue / Vite) — if monorepo
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/.env*
+
+# =========================
+# Mac specific
+# =========================
+*.swp

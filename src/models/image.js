@@ -40,7 +40,6 @@ const imageSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // Relasi fleksibel (polymorphic reference)
     ownerType: {
       type: String,
       enum: ['Company', 'User', 'Product'],
@@ -74,7 +73,6 @@ const imageSchema = new mongoose.Schema(
   }
 );
 
-// Index biar query cepat
 imageSchema.index({ ownerType: 1, ownerId: 1 });
 imageSchema.index({ isPrimary: 1 });
 
