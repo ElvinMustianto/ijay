@@ -90,7 +90,7 @@ router.post(
  *       401:
  *         description: Unauthorized
  */
-router.get('/', auth, getProducts);
+router.get('/', getProducts);
 
 /**
  * @swagger

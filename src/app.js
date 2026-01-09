@@ -1,16 +1,28 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import cors from 'cors'; // ⬅️ tambahkan ini
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
 import serverConfig from './config/serverConfig.js';
-import registerRoutes from './routes/index.js'; // ⬅️ PENTING
+import registerRoutes from './routes/index.js';
 
 const app = express();
 
 /* =====================
    MIDDLEWARE
 ===================== */
+
+// ⬇️ Tambahkan CORS — letakkan paling awal
+const corsOptions = {
+  origin: serverConfig.cors.allowedOrigins, // array string atau boolean (misal: ['https://web.example.com'])
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // aktifkan jika butuh cookie/sesi
+};
+
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
 const limiter = rateLimit({
@@ -47,14 +59,13 @@ const swaggerDefinition = {
 
 const swaggerOptions = {
   definition: swaggerDefinition,
-  apis: ['./src/routes/*.js', './src/controllers/*.js'], // auth.routes.js, product.routes.js, dll
+  apis: ['./src/routes/*.js', './src/controllers/*.js'],
 };
 
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
-
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-registerRoutes(app); // ⬅️ INI KUNCINYA
+registerRoutes(app);
 app.get('/', (req, res) => {
   res.send('API is running 🚀');
 });
