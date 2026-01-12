@@ -15,6 +15,7 @@ export const createProduct = async (req, res) => {
   try {
     const { name, price, description, stock, discountPrice } = req.body;
 
+    // validasi
     if (!name || price === undefined) {
       return badRequest(res, 'Name dan price wajib diisi');
     }
@@ -29,9 +30,11 @@ export const createProduct = async (req, res) => {
       createdBy: req.user.id,
     });
 
+    let images = [];
+
     // 2️⃣ Upload images via Image Service
     if (req.files && req.files.length > 0) {
-      await uploadImages({
+      images = await uploadImages({
         files: req.files,
         ownerType: 'Product',
         ownerId: product._id,
@@ -39,10 +42,14 @@ export const createProduct = async (req, res) => {
       });
     }
 
+    // 3️⃣ Return product + images
     return success(res, {
       code: 201,
       message: 'Product berhasil dibuat',
-      data: product,
+      data: {
+        ...product.toObject(), // agar bisa ditambahkan properti baru
+        images: images || [],
+      },
     });
   } catch (error) {
     return internalServerError(res, 'Gagal membuat product', error);
@@ -138,12 +145,38 @@ export const updateProduct = async (req, res) => {
       return notFound(res, 'Product tidak ditemukan');
     }
 
+    // 1️⃣ Update field yang diizinkan
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         product[field] = req.body[field];
       }
     });
 
+    // 2️⃣ Hapus gambar lama jika ada
+    if (req.body.removeImageIds && Array.isArray(req.body.removeImageIds)) {
+      await deleteImages(req.body.removeImageIds);
+      // filter images di product jika ada relasi array
+      if (product.images && Array.isArray(product.images)) {
+        product.images = product.images.filter(
+          (img) => !req.body.removeImageIds.includes(img._id.toString())
+        );
+      }
+    }
+
+    // 3️⃣ Upload gambar baru jika ada
+    let newImages = [];
+    if (req.files && req.files.length > 0) {
+      newImages = await uploadImages({
+        files: req.files,
+        ownerType: 'Product',
+        ownerId: product._id,
+        uploadedBy: req.user.id,
+      });
+      // gabungkan dengan images lama
+      product.images = [...(product.images || []), ...newImages];
+    }
+
+    // 4️⃣ Simpan perubahan product
     await product.save();
 
     return success(res, {
@@ -154,6 +187,7 @@ export const updateProduct = async (req, res) => {
     return internalServerError(res, 'Gagal update product', error);
   }
 };
+
 
 /**
  * DELETE PRODUCT (SOFT DELETE)

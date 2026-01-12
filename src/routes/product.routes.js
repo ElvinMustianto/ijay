@@ -120,7 +120,7 @@ router.get('/:id', auth, getProductById);
  * @swagger
  * /api/products/{id}:
  *   put:
- *     summary: Update product
+ *     summary: Update product (include images)
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
@@ -130,12 +130,43 @@ router.get('/:id', auth, getProductById);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Product ID
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Keyboard Mechanical RGB
+ *               description:
+ *                 type: string
+ *                 example: Updated description
+ *               price:
+ *                 type: number
+ *                 example: 750000
+ *               discountPrice:
+ *                 type: number
+ *                 example: 700000
+ *               stock:
+ *                 type: number
+ *                 example: 15
+ *               isActive:
+ *                 type: boolean
+ *                 example: true
+ *               removeImageIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of image IDs to remove
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: New images to upload
  *     responses:
  *       200:
  *         description: Product updated successfully
@@ -143,10 +174,9 @@ router.get('/:id', auth, getProductById);
  *         description: Unauthorized
  *       404:
  *         description: Product not found
- *       409:
- *         description: SKU already exists
  */
-router.put('/:id', auth, updateProduct);
+router.put('/:id', auth, upload.array('images', 5), updateProduct);
+
 
 /**
  * @swagger
