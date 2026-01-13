@@ -61,27 +61,32 @@ export const createProduct = async (req, res) => {
  */
 export const getProducts = async (req, res) => {
   try {
+    // Ambil semua produk (aktif saja)
     const products = await Product.find({ isActive: true })
       .sort({ createdAt: -1 })
       .lean();
 
     const productIds = products.map((p) => p._id);
 
+    // 🔹 Ambil SEMUA gambar aktif untuk produk ini (bukan hanya isPrimary)
     const images = await Image.find({
       ownerType: 'Product',
       ownerId: { $in: productIds },
-      isPrimary: true,
-      isActive: true,
+      isActive: true, // hanya gambar aktif
     }).lean();
 
+    // Kelompokkan gambar berdasarkan ownerId
     const imageMap = {};
     images.forEach((img) => {
-      imageMap[img.ownerId.toString()] = img;
+      const id = img.ownerId.toString();
+      if (!imageMap[id]) imageMap[id] = [];
+      imageMap[id].push(img);
     });
 
+    // Gabungkan ke produk
     const result = products.map((product) => ({
       ...product,
-      image: imageMap[product._id.toString()] || null,
+      images: imageMap[product._id.toString()] || [], // array gambar
     }));
 
     return success(res, {
