@@ -1,6 +1,8 @@
+import mongoose from 'mongoose';
 import Image from '../models/image.js';
 import cloudinary from '../config/cloudinary.js';
-import { success, notFound, internalServerError } from '../utils/responseHelpers.js';
+// ✅ TAMBAHKAN `badRequest` di sini
+import { success, badRequest, notFound, internalServerError } from '../utils/responseHelpers.js';
 
 export const deleteImage = async (req, res) => {
   try {
@@ -21,6 +23,10 @@ export const deleteImage = async (req, res) => {
 
 export const setPrimaryImage = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return badRequest(res, 'Invalid image ID format'); // ✅ Sekarang aman
+    }
+
     const image = await Image.findById(req.params.id);
     if (!image) return notFound(res, 'Image tidak ditemukan');
 

@@ -16,7 +16,7 @@ const app = express();
 // ⬇️ Tambahkan CORS — letakkan paling awal
 const corsOptions = {
   origin: serverConfig.cors.allowedOrigins, // array string atau boolean (misal: ['https://web.example.com'])
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, // aktifkan jika butuh cookie/sesi
 };

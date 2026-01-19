@@ -8,6 +8,9 @@ import {
   internalServerError,
 } from '../utils/responseHelpers.js';
 
+// Helper: konversi ObjectId ke string
+const toStringId = (id) => (id ? id.toString() : null);
+
 /**
  * CREATE PRODUCT + UPLOAD IMAGES
  */
@@ -15,12 +18,10 @@ export const createProduct = async (req, res) => {
   try {
     const { name, price, description, stock, discountPrice } = req.body;
 
-    // validasi
     if (!name || price === undefined) {
       return badRequest(res, 'Name dan price wajib diisi');
     }
 
-    // 1️⃣ Create product
     const product = await Product.create({
       name,
       description,
@@ -32,7 +33,6 @@ export const createProduct = async (req, res) => {
 
     let images = [];
 
-    // 2️⃣ Upload images via Image Service
     if (req.files && req.files.length > 0) {
       images = await uploadImages({
         files: req.files,
@@ -42,14 +42,23 @@ export const createProduct = async (req, res) => {
       });
     }
 
-    // 3️⃣ Return product + images
+    // Konversi ke objek plain dengan ID sebagai string
+    const productResponse = {
+      ...product.toObject(),
+      _id: toStringId(product._id),
+      createdBy: toStringId(product.createdBy),
+      images: images.map(img => ({
+        ...img.toObject(),
+        _id: toStringId(img._id),
+        ownerId: toStringId(img.ownerId),
+        uploadedBy: toStringId(img.uploadedBy),
+      })),
+    };
+
     return success(res, {
       code: 201,
       message: 'Product berhasil dibuat',
-      data: {
-        ...product.toObject(), // agar bisa ditambahkan properti baru
-        images: images || [],
-      },
+      data: productResponse, // ✅ gunakan "data"
     });
   } catch (error) {
     return internalServerError(res, 'Gagal membuat product', error);
@@ -57,41 +66,48 @@ export const createProduct = async (req, res) => {
 };
 
 /**
- * GET PRODUCT LIST + PRIMARY IMAGE
+ * GET PRODUCT LIST + GALLERY IMAGES
+ */
+/**
+ * GET PRODUCT LIST + GALLERY IMAGES
  */
 export const getProducts = async (req, res) => {
   try {
-    // Ambil semua produk (aktif saja)
     const products = await Product.find({ isActive: true })
       .sort({ createdAt: -1 })
       .lean();
 
     const productIds = products.map((p) => p._id);
 
-    // 🔹 Ambil SEMUA gambar aktif untuk produk ini (bukan hanya isPrimary)
     const images = await Image.find({
       ownerType: 'Product',
       ownerId: { $in: productIds },
-      isActive: true, // hanya gambar aktif
+      isActive: true,
     }).lean();
 
-    // Kelompokkan gambar berdasarkan ownerId
+    // Kelompokkan gambar & konversi ID
     const imageMap = {};
     images.forEach((img) => {
-      const id = img.ownerId.toString();
-      if (!imageMap[id]) imageMap[id] = [];
-      imageMap[id].push(img);
+      const ownerId = toStringId(img.ownerId);
+      if (!imageMap[ownerId]) imageMap[ownerId] = [];
+      imageMap[ownerId].push({
+        ...img,
+        _id: toStringId(img._id),
+        ownerId: ownerId,
+        uploadedBy: toStringId(img.uploadedBy),
+      });
     });
 
-    // Gabungkan ke produk
     const result = products.map((product) => ({
       ...product,
-      images: imageMap[product._id.toString()] || [], // array gambar
+      _id: toStringId(product._id),
+      createdBy: toStringId(product.createdBy),
+      images: imageMap[toStringId(product._id)] || [],
     }));
 
     return success(res, {
       message: 'Berhasil mengambil product',
-      data: result,
+       data: result, // ✅ INI ADALAH "data"
       total: result.length,
     });
   } catch (error) {
@@ -118,12 +134,21 @@ export const getProductById = async (req, res) => {
       .sort({ isPrimary: -1, createdAt: -1 })
       .lean();
 
+    const productResponse = {
+      ...product,
+      _id: toStringId(product._id),
+      createdBy: toStringId(product.createdBy),
+      images: images.map(img => ({
+        ...img,
+        _id: toStringId(img._id),
+        ownerId: toStringId(img.ownerId),
+        uploadedBy: toStringId(img.uploadedBy),
+      })),
+    };
+
     return success(res, {
       message: 'Berhasil mengambil detail product',
-      data: {
-        ...product,
-        images,
-      },
+       data: productResponse, // ✅ "data" berisi objek produk
     });
   } catch (error) {
     return internalServerError(res, 'Gagal mengambil product', error);
@@ -150,25 +175,20 @@ export const updateProduct = async (req, res) => {
       return notFound(res, 'Product tidak ditemukan');
     }
 
-    // 1️⃣ Update field yang diizinkan
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
         product[field] = req.body[field];
       }
     });
 
-    // 2️⃣ Hapus gambar lama jika ada
     if (req.body.removeImageIds && Array.isArray(req.body.removeImageIds)) {
-      await deleteImages(req.body.removeImageIds);
-      // filter images di product jika ada relasi array
-      if (product.images && Array.isArray(product.images)) {
-        product.images = product.images.filter(
-          (img) => !req.body.removeImageIds.includes(img._id.toString())
-        );
-      }
+      await Image.deleteMany({
+        _id: { $in: req.body.removeImageIds },
+        ownerType: 'Product',
+        ownerId: product._id,
+      });
     }
 
-    // 3️⃣ Upload gambar baru jika ada
     let newImages = [];
     if (req.files && req.files.length > 0) {
       newImages = await uploadImages({
@@ -177,22 +197,37 @@ export const updateProduct = async (req, res) => {
         ownerId: product._id,
         uploadedBy: req.user.id,
       });
-      // gabungkan dengan images lama
-      product.images = [...(product.images || []), ...newImages];
     }
 
-    // 4️⃣ Simpan perubahan product
     await product.save();
+
+    // Ambil ulang gambar terbaru
+    const updatedImages = await Image.find({
+      ownerType: 'Product',
+      ownerId: product._id,
+      isActive: true,
+    }).lean();
+
+    const productResponse = {
+      ...product.toObject(),
+      _id: toStringId(product._id),
+      createdBy: toStringId(product.createdBy),
+      images: updatedImages.map(img => ({
+        ...img,
+        _id: toStringId(img._id),
+        ownerId: toStringId(img.ownerId),
+        uploadedBy: toStringId(img.uploadedBy),
+      })),
+    };
 
     return success(res, {
       message: 'Product berhasil diperbarui',
-      data: product,
+      data: productResponse, // ✅ "data"
     });
   } catch (error) {
     return internalServerError(res, 'Gagal update product', error);
   }
 };
-
 
 /**
  * DELETE PRODUCT (SOFT DELETE)
@@ -208,7 +243,6 @@ export const deleteProduct = async (req, res) => {
     product.isActive = false;
     await product.save();
 
-    // Nonaktifkan semua image product
     await Image.updateMany(
       { ownerType: 'Product', ownerId: product._id },
       { isActive: false }
