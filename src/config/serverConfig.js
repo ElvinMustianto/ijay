@@ -1,58 +1,93 @@
 import env from './env.js';
 
-// Helper untuk parsing angka aman
+// Helper parsing number aman
 const safeParseInt = (value, fallback) => {
   const parsed = Number(value);
-  return isNaN(parsed) || parsed < 0 ? fallback : parsed;
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
 };
 
-// Daftar origin yang diizinkan — bisa berupa string[] atau '*' (hanya dev!)
-const allowedOrigins = (() => {
+// Helper parsing origins
+const parseAllowedOrigins = () => {
+  // 🚫 Jangan pernah pakai "*" jika credentials aktif
   if (env.CORS_ALLOWED_ORIGINS === '*') {
-    // ⚠️ Hanya untuk development
     return env.NODE_ENV === 'production'
-      ? ['https://your-frontend-domain.com'] // ← ganti sesuai domain frontend Anda (misal: https://thermometrics.hanya.id)
-      : '*';
+      ? ['https://your-frontend-domain.com'] // ⛔ HARUS DIGANTI
+      : [
+          'http://localhost:3000',
+          'http://localhost:5173',
+          'http://localhost:5174',
+          'http://127.0.0.1:5173',
+          'http://127.0.0.1:5174',
+        ];
   }
 
   try {
-    // Parse dari string JSON atau comma-separated
     if (env.CORS_ALLOWED_ORIGINS?.startsWith('[')) {
       return JSON.parse(env.CORS_ALLOWED_ORIGINS);
     }
-    return env.CORS_ALLOWED_ORIGINS
-      ? env.CORS_ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
-      : env.NODE_ENV === 'production'
-        ? ['https://your-frontend-domain.com'] // ← HARUS DIUBAH
-        : ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'];
-  } catch (e) {
-    console.warn('⚠️ Invalid CORS_ALLOWED_ORIGINS format. Falling back to dev defaults.');
-    return ['http://localhost:3000', 'http://localhost:5173'];
+
+    if (env.CORS_ALLOWED_ORIGINS) {
+      return env.CORS_ALLOWED_ORIGINS
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+    }
+
+    // Default fallback
+    return env.NODE_ENV === 'production'
+      ? ['https://your-frontend-domain.com'] // ⛔ HARUS DIGANTI
+      : [
+          'http://localhost:3000',
+          'http://localhost:5173',
+          'http://localhost:5174',
+        ];
+  } catch {
+    console.warn('⚠️ Invalid CORS_ALLOWED_ORIGINS. Using safe defaults.');
+    return [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:5174',
+    ];
   }
-})();
+};
 
 const serverConfig = {
-  // Environment
+  /* =====================
+     ENV
+  ===================== */
+
   env: env.NODE_ENV || 'development',
-  isProduction: (env.NODE_ENV || 'development') === 'production',
+  isProduction: env.NODE_ENV === 'production',
 
-  // Server
+  /* =====================
+     SERVER
+  ===================== */
+
   port: safeParseInt(env.PORT, 3000),
-  host: env.HOST || 'localhost', // ✅ lebih friendly daripada 127.0.0.1
+  host: env.HOST || '0.0.0.0', // ✅ lebih fleksibel
 
-  // Rate Limit
+  /* =====================
+     RATE LIMIT
+  ===================== */
+
   rateLimit: {
-    windowMs: safeParseInt(env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000), // 15 menit
+    windowMs: safeParseInt(env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
     maxRequests: safeParseInt(env.RATE_LIMIT_MAX_REQUESTS, 100),
   },
 
-  // CORS
+  /* =====================
+     CORS
+  ===================== */
+
   cors: {
-    allowedOrigins,
-    credentials: env.CORS_CREDENTIALS === 'true' || env.NODE_ENV !== 'production',
+    allowedOrigins: parseAllowedOrigins(),
+    credentials: env.CORS_CREDENTIALS !== 'false', // default true
   },
 
-  // Opsional: untuk Swagger & logging
+  /* =====================
+     API
+  ===================== */
+
   apiBasePath: env.API_BASE_PATH || '/api/v1',
 };
 
